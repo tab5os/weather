@@ -1,0 +1,11 @@
+id = "com.t5.example.weather"
+name = "Weather"
+version = "2.0.0"
+api = 1
+runtime = "native"
+entry = "app.elf"
+orientation = "any"
+description = "Current conditions, the next 24 hours and the week ahead, from Open-Meteo"
+
+[permissions]
+net = true
