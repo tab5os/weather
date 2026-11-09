@@ -9,3 +9,4 @@ description = "Current conditions, the next 24 hours and the week ahead, from Op
 
 [permissions]
 net = true
+ambient = true

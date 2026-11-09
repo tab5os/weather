@@ -580,6 +580,26 @@ static void build_loading(app_t *s)
     lv_obj_set_height(pad, T5_DP(72));
 }
 
+/* The standby screen's weather card (t5_ambient_set): the place now, kept
+ * for three hours, so it shows while the app isn't running. */
+static void post_card(app_t *s)
+{
+    const wx_cond_t *c = wx_cond(s->wx.code);
+    t5_ambient_card_t card = { .expires_s = 3 * 3600 };
+    snprintf(card.icon, sizeof card.icon, "%s", s->wx.day ? c->icon_day : c->icon_night);
+    snprintf(card.title, sizeof card.title, "%.31s", s->have_place.name);   /* long names cut */
+    deg(card.value, sizeof card.value, s->wx.temp);
+    char hi[16], lo[16];
+    if (s->wx.nd > 0) {
+        deg(hi, sizeof hi, s->wx.d[0].tmax);
+        deg(lo, sizeof lo, s->wx.d[0].tmin);
+        snprintf(card.detail, sizeof card.detail, "%s, high %s, low %s", c->text, hi, lo);
+    } else {
+        snprintf(card.detail, sizeof card.detail, "%s", c->text);
+    }
+    T5_IGNORE(t5_ambient_set(&card));     /* only the standby card misses the update */
+}
+
 static void render(app_t *s)
 {
     int32_t y = s->reset_scroll ? 0 : lv_obj_get_scroll_y(s->body);
@@ -860,6 +880,7 @@ static void tick(lv_timer_t *t)
                 s->have_f = f;
                 s->fetched = lv_tick_get();
                 if (raw) save_cache(s, &place, f, raw, raw_len);
+                post_card(s);
                 render(s);
             }
             /* The selection or units changed while this was in flight. */
