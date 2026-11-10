@@ -2,3 +2,5 @@ build/
 *.t5app
 *.elf
 *.map
+.t5sdk/
+*.pem

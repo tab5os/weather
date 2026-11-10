@@ -1,0 +1,86 @@
+# Builds the app into a .t5app on every push and pull request, and attaches it
+# to a GitHub release when you push a tag that matches manifest.toml's version
+# (v1.0.0 for version = "1.0.0").
+#
+# Signing is optional: add your key (from `t5 keygen`) as the repository secret
+# T5_SIGNING_KEY and the package is signed with it.
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # ESP-IDF's image has the RISC-V toolchain, CMake, Ninja and Python. The
+    # tag must match the SDK's ESP-IDF version (.t5sdk/*/sdk/idf_version.txt).
+    container: espressif/idf:v6.1
+    outputs:
+      id: ${{ steps.manifest.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the manifest
+        id: manifest
+        shell: bash
+        run: |
+          get() { sed -n "s/^$1 *= *\"\([^\"]*\)\".*/\1/p" manifest.toml | head -1; }
+          echo "id=$(get id)" >> "$GITHUB_OUTPUT"
+          echo "version=$(get version)" >> "$GITHUB_OUTPUT"
+
+      - name: A release tag matches the manifest's version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          [ "${GITHUB_REF_NAME#v}" = "${{ steps.manifest.outputs.version }}" ] || {
+            echo "tag $GITHUB_REF_NAME doesn't match manifest.toml version ${{ steps.manifest.outputs.version }}"; exit 1; }
+
+      - name: Build
+        shell: bash
+        env:
+          T5_SIGNING_KEY: ${{ secrets.T5_SIGNING_KEY }}
+        run: |
+          if [ -n "$T5_SIGNING_KEY" ]; then
+            key="$RUNNER_TEMP/t5key.pem"
+            printf '%s\n' "$T5_SIGNING_KEY" > "$key"
+            ./build.sh --sign "$key"
+            rm -f "$key"
+          else
+            ./build.sh
+          fi
+
+      - name: The SDK was built for this ESP-IDF
+        shell: bash
+        run: |
+          want="$(tr -d '[:space:]' < .t5sdk/*/sdk/idf_version.txt)"
+          have="$(cd "$IDF_PATH" && git describe --tags --exact-match 2>/dev/null || echo unknown)"
+          [ "$want" = "$have" ] || echo "::warning::the SDK wants ESP-IDF $want, the container has $have"
+
+      - name: Check the package
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh" >/dev/null
+          python .t5sdk/*/tools/t5/t5pack.py --inspect "build/${{ steps.manifest.outputs.id }}.t5app"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.manifest.outputs.id }}
+          path: build/${{ steps.manifest.outputs.id }}.t5app
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.id }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ needs.build.outputs.id }}.t5app
+          generate_release_notes: true

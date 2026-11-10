@@ -6,16 +6,19 @@ It needs Tab5 OS with app API level 1 and asks for the `net` and `ambient` permi
 
 ## Build
 
-You need the [Tab5 OS SDK](https://github.com/tab5os/tab5os/blob/main/docs/sdk.md): a tab5os checkout with a firmware build, or the SDK release. The compiler is ESP-IDF v6.1's RISC-V toolchain.
+This repo is set up like the [app template](https://github.com/tab5os/app-template). You need ESP-IDF v6.1 (or just its RISC-V toolchain), CMake 3.22+, Ninja, Python 3.11+ and curl.
 
 ```sh
-t5 app-build .            # build/com.t5.example.weather.t5app
-t5 run .                  # build, push to a paired Tab5, launch, stream the log
+./build.sh                # build/com.t5.example.weather.t5app
 ```
 
-Or with CMake directly: `cmake -S . -B build -G Ninja -DT5_SDK=<sdk dir> && cmake --build build`.
+The first run downloads the Tab5 OS SDK version in `tab5os-sdk.txt` into `.t5sdk/` and checks its checksum. Set `T5_SDK` to use an SDK you already have.
 
-To install by hand, copy the `.t5app` to the SD card and tap it in Files.
+To install, copy the `.t5app` to the SD card and tap it in Files. You can also get it from this repo's [releases](https://github.com/tab5os/weather/releases), or from the latest CI run's artifacts.
+
+## CI and releases
+
+Every push builds the `.t5app` in CI and keeps it as an artifact. To release, set `version` in `manifest.toml`, commit, and push a matching tag (`v2.0.0` for `version = "2.0.0"`). CI then publishes a GitHub release with the `.t5app` attached.
 
 ## History
 
