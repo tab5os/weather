@@ -1,0 +1,4 @@
+build/
+*.t5app
+*.elf
+*.map
