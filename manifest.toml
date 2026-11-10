@@ -4,6 +4,7 @@ version = "2.0.0"
 api = 1
 runtime = "native"
 entry = "app.elf"
+icon = "icon.png"
 orientation = "any"
 description = "Current conditions, the next 24 hours and the week ahead, from Open-Meteo"
 

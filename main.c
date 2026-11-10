@@ -242,10 +242,10 @@ static lv_obj_t *build_hero(app_t *s, lv_obj_t *parent)
     const wx_cond_t *c = wx_cond(w->code);
     lv_obj_t *h = hero_shell(s, parent, c->mood, w->day, s->have_place.name);
 
-    /* "Sunday, 8 Nov · 11:00" */
+    /* "Sunday 8 Nov, 11:00" */
     char when[64];
     int month = atoi(w->time + 5);
-    snprintf(when, sizeof when, "%s, %d %s · %.5s", DAYS[wx_weekday(w->time)], atoi(w->time + 8),
+    snprintf(when, sizeof when, "%s %d %s, %.5s", DAYS[wx_weekday(w->time)], atoi(w->time + 8),
              MONTHS[(month >= 1 && month <= 12) ? month - 1 : 0], w->time + 11);
     on_hero(md_label_create(h, when, MD_TYPE_BODY2), 191);
 
@@ -286,13 +286,13 @@ static lv_obj_t *build_hero(app_t *s, lv_obj_t *parent)
     if (w->nd) {
         deg(hi, sizeof hi, w->d[0].tmax);
         deg(lo, sizeof lo, w->d[0].tmin);
-        snprintf(buf, sizeof buf, "H %s  L %s  ·  Feels %s", hi, lo, fl);
+        snprintf(buf, sizeof buf, "High %s, low %s\nFeels like %s", hi, lo, fl);
     } else {
         snprintf(buf, sizeof buf, "Feels like %s", fl);
     }
     lv_obj_t *sub = on_hero(md_label_create(h, buf, MD_TYPE_BODY2), 204);
     lv_obj_set_width(sub, LV_PCT(100));
-    lv_label_set_long_mode(sub, LV_LABEL_LONG_MODE_DOTS);
+    lv_label_set_long_mode(sub, LV_LABEL_LONG_MODE_WRAP);
     return h;
 }
 
@@ -351,12 +351,12 @@ static void build_tiles(app_t *s, lv_obj_t *parent, int width_dp)
     tile(grid, tw, MD_ICON_WATER_DROP, 0x64B5F6, "Humidity", v, NULL, d);
 
     snprintf(v, sizeof v, "%d", wx_round(w->wind));
-    snprintf(d, sizeof d, "%s · gusts %d", wx_compass(w->wind_dir), wx_round(w->gusts));
+    snprintf(d, sizeof d, "%s, gusts %d", wx_compass(w->wind_dir), wx_round(w->gusts));
     tile(grid, tw, MD_ICON_AIR, 0x80CBC4, "Wind", v, w->u_wind, d);
 
     float uv = w->uv != WX_NAN ? w->uv : (w->nd ? w->d[0].uv : 0);
     snprintf(v, sizeof v, "%d", wx_round(uv));
-    if (w->nd && w->d[0].uv != WX_NAN) snprintf(d, sizeof d, "%s · max %d today", uv_word(uv), wx_round(w->d[0].uv));
+    if (w->nd && w->d[0].uv != WX_NAN) snprintf(d, sizeof d, "%s, up to %d today", uv_word(uv), wx_round(w->d[0].uv));
     else snprintf(d, sizeof d, "%s", uv_word(uv));
     tile(grid, tw, MD_ICON_LIGHT_MODE, 0xFFD54F, "UV index", v, NULL, d);
 
@@ -647,7 +647,7 @@ static void render(app_t *s)
     }
 
     char foot[96];
-    snprintf(foot, sizeof foot, "Updated %.5s %s · Weather data by Open-Meteo.com", s->wx.time + 11, s->wx.tz);
+    snprintf(foot, sizeof foot, "Updated %.5s %s\nWeather data by Open-Meteo.com", s->wx.time + 11, s->wx.tz);
     lv_obj_t *f = text(s->body, foot, MD_TYPE_CAPTION, md_scheme()->on_surface.disabled);
     lv_obj_set_width(f, LV_PCT(100));
     lv_obj_set_style_text_align(f, LV_TEXT_ALIGN_CENTER, 0);
@@ -888,7 +888,7 @@ static void tick(lv_timer_t *t)
             if (p && (!same_place(p, &s->have_place) || s->have_f != s->fahrenheit)) refresh(s);
         } else {
             show_results(s);
-            if (err && s->status) lv_label_set_text(s->status, "Search failed. Check Wi-Fi and try again.");
+            if (err && s->status) lv_label_set_text(s->status, "Couldn't search. Check the Wi-Fi connection and try again.");
         }
         free(raw);
     }
@@ -1007,7 +1007,7 @@ static void do_search(app_t *s)
     while (q && *q == ' ') q++;
     if (!q || !*q) return;
     if (!online()) {
-        lv_label_set_text(s->status, "Not connected to Wi-Fi.");
+        lv_label_set_text(s->status, "Connect to Wi-Fi to search for places.");
         lv_obj_set_hidden(s->status, false);
         return;
     }
@@ -1076,7 +1076,7 @@ static void build_places(app_t *s)
     }
 
     md_section_create(body, "Units");
-    lv_obj_t *u = md_row_create(body, MD_ICON_THERMOSTAT, "Fahrenheit", "°F, mph and inches");
+    lv_obj_t *u = md_row_create(body, MD_ICON_THERMOSTAT, "Use Fahrenheit", "°F, mph and inches");
     lv_obj_t *sw = md_row_switch(u, s->fahrenheit);
     lv_obj_add_event_cb(sw, units_changed, LV_EVENT_VALUE_CHANGED, s);
 
